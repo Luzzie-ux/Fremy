@@ -40,11 +40,11 @@ class BaseHandler {
 
   loadCommand(name: string, command: Command): void {
     if (!name || !command || name !== command.data.name) return;
-    if (this.commands.has(name)) {
+    if (this.has(name)) {
       console.log(`Command ${name} already exists, keeping oldest`);
       return;
     }
-    this.commands.set(name, command);
+    this.set(name, command);
   }
 
   loadList(list: Record<string, Command>): void {
@@ -77,15 +77,6 @@ class BaseHandler {
         console.log(err.message);
       }
       throw err;
-    }
-  }
-
-  async load(commands: string | Record<string, Command>): Promise<void> {
-    if (!commands) return;
-    if (typeof commands !== "string") {
-      this.loadList(commands);
-    } else {
-      await this.loadPath(commands);
     }
   }
 
@@ -133,7 +124,7 @@ class BaseHandler {
   async dispatch(interaction: Interaction): Promise<void> {
     if (!interaction.isCommand()) return;
 
-    const command = this._commands.get(interaction.commandName);
+    const command = this.get(interaction.commandName);
     if (!command) return;
 
     try {
@@ -159,19 +150,26 @@ class BaseHandler {
     }
   }
 
+  get commands() {
+    return this._commands;
+  }
   get keys() {
-    return [...this._commands.keys()];
+    return [...this.commands.keys()];
   }
   get values() {
-    return [...this._commands.values()];
+    return [...this.commands.values()];
   }
 
   get(key: string) {
-    if (!key) return undefined;
-    return this._commands.get(key);
+    return this.commands.get(key);
   }
-  get commands() {
-    return this._commands;
+
+  set(key: string, value: Command) {
+    this.commands.set(key, value);
+  }
+
+  has(key: string) {
+    return this.commands.has(key);
   }
 }
 

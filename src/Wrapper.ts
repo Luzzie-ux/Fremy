@@ -81,9 +81,6 @@ class BaseWrapper {
     this.#extras = extras;
   }
 
-  get token(): string {
-    return this.#token;
-  }
   get intents(): Array<GatewayIntentBits> {
     return this._intents;
   }
@@ -117,7 +114,7 @@ class BaseWrapper {
 
   async start(): Promise<void> {
     try {
-      await this.client.login(this.token);
+      await this.client.login(this.#token);
     } catch (err: unknown) {
       if (err instanceof Error) console.error(err.message);
       throw err;
@@ -133,17 +130,22 @@ class BaseWrapper {
     }
   }
 
-  // Wrappers methods for the BaseHandler methods;
+  // Wrappers for BaseHandler methods;
   async load(path: string): Promise<void>;
   async load(list: Record<string, Command>): Promise<void>;
   async load(commands: string | Record<string, Command>): Promise<void> {
-    await this.handler.load(commands);
+    if (!commands) return;
+    if (typeof commands !== "string") {
+      this.handler.loadList(commands);
+    } else {
+      await this.handler.loadPath(commands);
+    }
   }
   async register() {
     await this.handler.register({
-      token: this.token,
+      token: this.#token,
       clientId: this._clientId,
-      guildId: this.guildId,
+      guildId: this._guildId,
     });
   }
   async dispatch(interaction: Interaction) {
@@ -208,4 +210,4 @@ function toJSON(env: NodeJS.ProcessEnv, prefix: string): JSONConfig {
   };
 }
 
-export default BaseWrapper;
+export { BaseWrapper };

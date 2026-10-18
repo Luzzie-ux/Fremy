@@ -1,28 +1,27 @@
 {
   "name": "fremy",
   "version": "1.0.0",
-  "description": "discord.js wrapper",
+  "description": "discord.js client wrapper",
   "keywords": [
     "discord",
     "discord.js",
-    "wrapper",
-    "discord app"
+    "wrapper"
   ],
   "repository": {
-    "type": "git",
-    "url": "none"
+    "type": "github",
+    "url": "https://github.com/Luzzie-ux/Fremy.git"
   },
-  "license": "ISC",
+  "license": "Apache-2.0",
   "author": "Luzzie-ux",
   "type": "module",
-  "main": "index.js",
+  "main": "Fremy.js",
   "scripts": {
-    "build": "rm -rf ./dist && npx tsc --project ./.tsconfig.json",
+    "build": "rm -rf ./dist && npx tsc",
     "start": "node index.js",
     "env": "node --env-file=.env index.js",
-    "test": "npm run build && npm run start",
-    "test-env": "npm run build && npm run env",
-    "lint": "npm run build && eslint --config ./.eslint.ts && echo $?"
+    "lint": "npx eslint && echo $?",
+    "test": "npm run build && npm run lint && npm run start",
+    "test-env": "npm run build && npm run lint && npm run env"
   },
   "dependencies": {
     "discord.js": "^14.27.0",

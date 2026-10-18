@@ -1,4 +1,4 @@
-import BaseWrapper from "./dist/Wrapper.js";
+import { BaseWrapper } from "./dist/Wrapper.js";
 import configs from "./.config.json" with { type: "json" };
 try {
   const base = new BaseWrapper(configs);
