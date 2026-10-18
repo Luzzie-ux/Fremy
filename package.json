@@ -1,0 +1,40 @@
+{
+  "name": "fremy",
+  "version": "1.0.0",
+  "description": "discord.js wrapper",
+  "keywords": [
+    "discord",
+    "discord.js",
+    "wrapper",
+    "discord app"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "none"
+  },
+  "license": "ISC",
+  "author": "Luzzie-ux",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "build": "rm -rf ./dist && npx tsc --project ./.tsconfig.json",
+    "start": "node index.js",
+    "env": "node --env-file=.env index.js",
+    "test": "npm run build && npm run start",
+    "test-env": "npm run build && npm run env",
+    "lint": "npm run build && eslint --config ./.eslint.ts && echo $?"
+  },
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "jiti": "^2.7.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.4",
+    "@types/typescript": "^0.4.29",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "typescript-eslint": "^8.71.2"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolveJsonModule": true,
+    "rewriteRelativeImportExtensions": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationDir": "dist/types",
+    "declarationMap": true,
+    "types": ["node", "typescript"],
+    "strict": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
