@@ -14,7 +14,6 @@ export default defineConfig([
       "prefer-const": ["warn"],
       "no-await-in-loop": "warn",
       "no-unused-vars": "warn",
-      "no-explicit-any": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
     },
     languageOptions: {

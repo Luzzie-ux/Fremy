@@ -1,9 +1,8 @@
-import { Fremy, Init } from "./dist/Fremy.js";
-import configs from "./.config.json" with { type: "json" };
+import { CommandManager, EventManager } from "./dist/Fremy/Manager.js";
+
 try {
-  const bot = new Fremy(configs);
-  await Init(bot, "./dist/Commands");
-  console.log(bot.commands.size);
+  const cmd = new CommandManager();
+  const evt = new EventManager();
 } catch (err) {
   console.log(err);
 }

@@ -1,7 +1,10 @@
 import { Client, Events, GatewayIntentBits, Interaction } from "discord.js";
-import { BaseHandler, Command } from "./Handler.js";
-import { BaseListener, DiscordEvent } from "./Listener.ts";
-import { CommandManager, EventManager } from "./Manager.ts";
+import {
+  CommandManager,
+  EventManager,
+  DiscordEvent,
+  DiscordCommand,
+} from "./Manager.ts";
 
 type Intent =
   GatewayIntentBits | IntentName | Array<GatewayIntentBits | IntentName>;
@@ -20,28 +23,25 @@ interface JSONConfig {
 }
 
 class BaseWrapper {
-  // These Properties are member properties of Wrapper
   #token: string;
-  _intents: Array<GatewayIntentBits>;
-  _clientId: string;
-  _guildId: string;
-  #extras: Record<string, unknown> = {};
-  // These Class Objects, are part of discord.js
-  // or another wrapper for something part of discord.js
+  #intents: Array<GatewayIntentBits>;
+  #clientId: string;
+  #guildId: string;
+  #extras: Record<string, unknown>;
   #client?: Client;
-  #events: EventManager = new EventManager();
-  #commands: CommandManager = new CommandManager();
-  #handler: BaseHandler = new BaseHandler();
-  #listener: BaseListener = new BaseListener();
+  #events: EventManager;
+  #commands: CommandManager;
 
   constructor(configs: JSONConfig) {
     const { token, intents, clientId, guildId, ...rest } = configs;
     const valid = validate({ token, intents, clientId, guildId });
     this.#token = valid.token;
-    this._intents = valid.intents;
-    this._clientId = valid.clientId;
-    this._guildId = valid.guildId;
+    this.#intents = valid.intents;
+    this.#clientId = valid.clientId;
+    this.#guildId = valid.guildId;
     this.#extras = rest;
+    this.#events = new EventManager();
+    this.#commands = new CommandManager();
   }
 
   static fromEnv(env: NodeJS.ProcessEnv = process.env, prefix?: string) {
@@ -59,38 +59,40 @@ class BaseWrapper {
     if (!Array.isArray(intents)) intents = [intents];
     for (const value of intents) {
       if (!value) throw new Error(`Invalid Intent`);
-      if (typeof value === "string") this._intents.push(toIntent(value));
-      else this._intents.push(value);
+      if (typeof value === "string") this.#intents.push(toIntent(value));
+      else this.#intents.push(value);
     }
   }
 
   createClient(): Client {
     this.#client = new Client({ intents: this.intents });
-    this.#listener.loadEvent(Events.ClientReady, {
-      name: Events.ClientReady,
-      once: true,
-      execute: (readyClient: Client) => {
-        console.log(`${readyClient.user?.tag} is Ready!`);
+    const defaultEvents: Record<string, DiscordEvent> = {
+      ready: {
+        name: Events.ClientReady,
+        once: true,
+        execute(...[readyClient]) {
+          const client: Client = readyClient as Client;
+          console.log(`${client.user?.tag} is ready!`);
+        },
       },
-    });
-    this.#listener.loadEvent(Events.InteractionCreate, {
-      name: Events.InteractionCreate,
-      once: false,
-      execute: (i) => void this.deployCommands(i),
-    });
-    this.deployEvents();
-    this.#client.once(Events.ClientReady, (readyClient) => {
-      console.log(`${readyClient.user.tag} is Ready!`);
-    });
-    this.#client.on(
-      Events.InteractionCreate,
-      (i) => void this.deployCommands(i),
-    );
+      interaction: {
+        name: Events.InteractionCreate,
+        execute: (...[interaction]) => {
+          const i = interaction as Interaction;
+          void this.dispatchCmds(i);
+        },
+      },
+    };
+    this.loadEvents(defaultEvents);
     return this.#client;
   }
 
   async startClient(): Promise<void> {
     try {
+      if (!this.client) {
+        console.warn("Unable to reach client: no instance found");
+        return;
+      }
       await this.client.login(this.#token);
     } catch (err: unknown) {
       if (err instanceof Error) console.error(err.message);
@@ -100,6 +102,10 @@ class BaseWrapper {
 
   async stopClient(): Promise<void> {
     try {
+      if (!this.client) {
+        console.warn("Unable to reach client: no instance found");
+        return;
+      }
       await this.client.destroy();
     } catch (err: unknown) {
       if (err instanceof Error) console.error(err.message);
@@ -107,96 +113,81 @@ class BaseWrapper {
     }
   }
 
-  // Wrappers for BaseHandler methods;
-  async loadCommands(): Promise<void>;
-  async loadCommands(path: string): Promise<void>;
-  async loadCommands(list: Record<string, Command>): Promise<void>;
-  async loadCommands(
-    commands?: string | Record<string, Command>,
-  ): Promise<void> {
+  async loadCmds(commands: string | Record<string, DiscordCommand>) {
     if (!commands) return;
-    if (typeof commands !== "string") {
-      this.handler.loadCommandList(commands);
+    if (typeof commands === "string") {
+      await this.commands.loadPath(commands);
     } else {
-      await this.handler.loadCommandPath(commands);
+      this.commands.loadList(commands);
     }
-  }
-  async registerCommands() {
-    await this.handler.registerCommands({
-      token: this.#token,
-      clientId: this._clientId,
-      guildId: this._guildId,
-    });
-  }
-  async deployCommands(interaction: Interaction) {
-    await this.handler.dispatchCommands(interaction);
-  }
-  get commands() {
-    return this.handler.commands;
   }
 
-  // Wrappers for BaseListener methods;
-  get events() {
-    return this.listener.events;
-  }
-  async loadEvents(
-    events?: string | Record<string, DiscordEvent>,
-  ): Promise<void> {
+  async loadEvents(events: string | Record<string, DiscordEvent>) {
     if (!events) return;
-    if (typeof events !== "string") {
-      this.listener.loadEventList(events);
+    if (typeof events === "string") {
+      await this.events.loadPath(events);
     } else {
-      await this.listener.loadEventPath(events);
+      this.events.loadList(events);
     }
   }
-  async deployEvents() {
-    this.listener.dispatch(this.client);
+
+  async registerCmds(guild: boolean) {
+    let guildId: string | undefined;
+    if (guild) guildId = this.guildId;
+    else guildId = undefined;
+    await this.commands.register({
+      token: this.#token,
+      clientId: this.clientId,
+      guildId,
+    });
+  }
+
+  async dispatchCmds(interaction: Interaction) {
+    await this.commands.dispatch(interaction);
   }
 
   // Getters and Setters:
   set clientId(clientId: string) {
     if (!clientId) {
-      this._clientId = "";
+      this.#clientId = "";
       return;
     }
-    this._clientId = clientId;
+    this.#clientId = clientId;
   }
 
   set guildId(guildId: string) {
     if (!guildId) {
-      this._guildId = "";
+      this.#guildId = "";
       return;
     }
-    this._guildId = guildId;
+    this.#guildId = guildId;
   }
 
   set extras(extras: Record<string, unknown>) {
     this.#extras = extras;
   }
 
-  get intents(): Array<GatewayIntentBits> {
-    return this._intents;
+  get intents() {
+    return this.#intents;
   }
-  get clientId(): string {
-    return this._clientId;
+  get clientId() {
+    return this.#clientId;
   }
-  get guildId(): string {
-    return this._guildId;
+  get guildId() {
+    return this.#guildId;
   }
-  get extras(): Record<string, unknown> {
+  get extras() {
     return this.#extras;
   }
-  get client(): Client {
-    if (!this.#client) throw new Error("Unable to reach Client");
+  get client() {
+    if (!this.#client) return undefined;
     return this.#client;
   }
-
-  get handler(): BaseHandler {
-    return this.#handler;
+  get commands() {
+    return this.#commands;
   }
-
-  get listener(): BaseListener {
-    return this.#listener;
+  get events() {
+    return this.#events;
   }
 }
 

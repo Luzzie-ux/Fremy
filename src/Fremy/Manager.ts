@@ -12,21 +12,28 @@ import type { Interaction, InteractionReplyOptions } from "discord.js";
 import { ImportPath } from "./utils.ts";
 
 abstract class Manager<T> {
+  static count = 0;
   collection: Collection<string, T> = new Collection();
   isType(value: unknown): value is T {
     return (
       typeof value === "object" &&
       value !== null &&
-      ("data" in value || "name" in value) &&
+      (("data" in value &&
+        (value.data instanceof SlashCommandBuilder ||
+          value.data instanceof ContextMenuCommandBuilder)) ||
+        "name" in value) &&
       "execute" in value &&
       typeof value.execute === "function"
     );
   }
   loadItem(name: string, item: T): void {
+    const newName = `(${Manager.count})${name}`;
     if (!name || !item) return;
-    if (this.has(name)) {
+    if (this.has(name) || this.has(newName)) {
       console.warn(`Item ${name} already exists!`);
-      return;
+      console.warn(`saving as ${newName}`);
+      this.set(newName, item);
+      Manager.count++;
     }
     this.set(name, item);
   }
@@ -84,7 +91,7 @@ class CommandManager extends Manager<DiscordCommand> {
         console.warn("Couldnt find command property 'data'");
         return;
       }
-      const type = command.data.toJSON().type;
+      const type = command.data.toJSON().type ?? 1;
       this.loadItem(`${type}:${command.data.name}`, command);
     });
   }
@@ -129,7 +136,9 @@ class CommandManager extends Manager<DiscordCommand> {
   async dispatch(interaction: Interaction): Promise<void> {
     if (!interaction.isCommand()) return;
 
-    const command = this.get(interaction.commandName);
+    const command = this.get(
+      `${interaction.commandType}:${interaction.commandName}`,
+    );
     if (!command) return;
 
     try {
@@ -140,9 +149,9 @@ class CommandManager extends Manager<DiscordCommand> {
         this.isContext(command)
       ) {
         await command.execute(interaction);
-      }
+      } else throw new Error(`Unknown command type ${interaction.commandName}`);
     } catch (err: unknown) {
-      console.error(`Error with command ${command.data.name}`, err);
+      console.error(`Error with command ${interaction.commandName}`, err);
       if (interaction.isRepliable()) {
         const msg: InteractionReplyOptions = {
           content: "Something went wrong.",
@@ -153,10 +162,6 @@ class CommandManager extends Manager<DiscordCommand> {
         else await interaction.reply(msg);
       }
     }
-  }
-
-  get commands() {
-    return this.collection;
   }
 }
 
@@ -180,8 +185,8 @@ class EventManager extends Manager<DiscordEvent> {
   }
 
   deploy(client: Client): void {
-    this.events.forEach((event) => {
-      const handler = (...args: unknown[]) => {
+    this.collection.forEach((event) => {
+      const handler = async (...args: unknown[]) => {
         try {
           event.execute(...args);
         } catch (err: unknown) {
@@ -196,10 +201,6 @@ class EventManager extends Manager<DiscordEvent> {
       }
     });
   }
-
-  get events() {
-    return this.collection;
-  }
 }
 
-export { CommandManager, EventManager };
+export { CommandManager, EventManager, DiscordEvent, DiscordCommand };
