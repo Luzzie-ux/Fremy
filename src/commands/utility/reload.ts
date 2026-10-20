@@ -8,6 +8,9 @@ const reload = {
     ),
   execute: async (interaction: Interaction) => {
     if (!interaction.isChatInputCommand()) return;
+    if (interaction.isRepliable()) {
+      interaction.reply("Command still to be made");
+    }
     console.log(interaction);
   },
 };
