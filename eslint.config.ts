@@ -4,6 +4,7 @@ import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
+  tseslint.configs.recommended,
   {
     files: ["./src/*.{js,mjs,cjs,ts,mts,cts}"],
     plugins: { js },
@@ -12,11 +13,12 @@ export default defineConfig([
       "no-constructor-return": "error",
       "prefer-const": ["warn"],
       "no-await-in-loop": "warn",
-      "no-unused-vars": "off",
+      "no-unused-vars": "warn",
+      "no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "warn",
     },
     languageOptions: {
       globals: globals.node,
     },
   },
-  tseslint.configs.recommended,
 ]);

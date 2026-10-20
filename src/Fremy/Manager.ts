@@ -13,12 +13,13 @@ import { ImportPath } from "./utils.ts";
 
 abstract class Manager<T> {
   collection: Collection<string, T> = new Collection();
-  isType(I: unknown): I is T {
+  isType(value: unknown): value is T {
     return (
-      I === Object &&
-      I !== null &&
-      ("data" in I || "name" in I) &&
-      "execute" in I
+      typeof value === "object" &&
+      value !== null &&
+      ("data" in value || "name" in value) &&
+      "execute" in value &&
+      typeof value.execute === "function"
     );
   }
   loadItem(name: string, item: T): void {
@@ -45,7 +46,6 @@ abstract class Manager<T> {
         .filter((mod): mod is T => this.isType(mod)),
     );
   }
-
   abstract loadPath(path: string): Promise<void>;
   get keys() {
     return [...this.collection.keys()];
@@ -57,7 +57,7 @@ abstract class Manager<T> {
     return this.collection.get(key);
   }
   set(key: string, value: T) {
-    this.collection.set(key, value);
+    return this.collection.set(key, value);
   }
   has(key: string) {
     return this.collection.has(key);
@@ -81,12 +81,14 @@ class CommandManager extends Manager<DiscordCommand> {
     const commands: DiscordCommand[] = await this._FromPath(path);
     commands.forEach((command) => {
       if (!command?.data) {
-        console.log("Couldnt find command property 'data'");
+        console.warn("Couldnt find command property 'data'");
         return;
       }
-      this.loadItem(command?.data?.name, command);
+      const type = command.data.toJSON().type;
+      this.loadItem(`${type}:${command.data.name}`, command);
     });
   }
+
   async register(required: {
     token: string;
     clientId: string;
@@ -97,16 +99,13 @@ class CommandManager extends Manager<DiscordCommand> {
     }
 
     const rest = new REST().setToken(required.token);
-    if (this.commands.size === 0) {
-      console.log("[WARNING] The commands list is empty, aborting");
-      return;
-    }
     const body = this.values.map((c) => c.data.toJSON());
-    let data: unknown[];
     try {
+      let data: unknown[];
       console.log(
         `Started refreshing ${body.length} application (/) commands.`,
       );
+
       if (required.guildId) {
         data = (await rest.put(
           Routes.applicationGuildCommands(required.clientId, required.guildId),
@@ -117,13 +116,12 @@ class CommandManager extends Manager<DiscordCommand> {
           body,
         })) as unknown[];
       }
+
       console.log(
         `Successfully reloaded ${data.length} application (/) commands.`,
       );
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        console.error(err.message);
-      }
+      console.error(`Error while registring commands`, err);
       throw err;
     }
   }
@@ -144,7 +142,7 @@ class CommandManager extends Manager<DiscordCommand> {
         await command.execute(interaction);
       }
     } catch (err: unknown) {
-      console.error(err);
+      console.error(`Error with command ${command.data.name}`, err);
       if (interaction.isRepliable()) {
         const msg: InteractionReplyOptions = {
           content: "Something went wrong.",
@@ -165,7 +163,7 @@ class CommandManager extends Manager<DiscordCommand> {
 interface DiscordEvent {
   name: string;
   once?: boolean;
-  execute: (...args: any[]) => Promise<void> | void;
+  execute: (...args: unknown[]) => Promise<void> | void;
 }
 
 class EventManager extends Manager<DiscordEvent> {
@@ -174,7 +172,7 @@ class EventManager extends Manager<DiscordEvent> {
     const events: DiscordEvent[] = await this._FromPath(path);
     events.forEach((event) => {
       if (!event?.name) {
-        console.log("Couldnt find event property 'name'");
+        console.warn("Couldnt find event property 'name'");
         return;
       }
       this.loadItem(event.name, event);
@@ -183,10 +181,18 @@ class EventManager extends Manager<DiscordEvent> {
 
   deploy(client: Client): void {
     this.events.forEach((event) => {
+      const handler = (...args: unknown[]) => {
+        try {
+          event.execute(...args);
+        } catch (err: unknown) {
+          console.error(`Error in event ${event.name}`, err);
+        }
+      };
+
       if (event.once) {
-        client.once(event.name, ([...args]) => event.execute([...args]));
+        client.once(event.name, handler);
       } else {
-        client.on(event.name, ([...args]) => event.execute([...args]));
+        client.on(event.name, handler);
       }
     });
   }

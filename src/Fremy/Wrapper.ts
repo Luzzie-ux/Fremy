@@ -1,6 +1,7 @@
 import { Client, Events, GatewayIntentBits, Interaction } from "discord.js";
 import { BaseHandler, Command } from "./Handler.js";
 import { BaseListener, DiscordEvent } from "./Listener.ts";
+import { CommandManager, EventManager } from "./Manager.ts";
 
 type Intent =
   GatewayIntentBits | IntentName | Array<GatewayIntentBits | IntentName>;
@@ -28,6 +29,8 @@ class BaseWrapper {
   // These Class Objects, are part of discord.js
   // or another wrapper for something part of discord.js
   #client?: Client;
+  #events: EventManager = new EventManager();
+  #commands: CommandManager = new CommandManager();
   #handler: BaseHandler = new BaseHandler();
   #listener: BaseListener = new BaseListener();
 
@@ -61,60 +64,19 @@ class BaseWrapper {
     }
   }
 
-  set clientId(clientId: string) {
-    if (!clientId) {
-      this._clientId = "";
-      return;
-    }
-    this._clientId = clientId;
-  }
-
-  set guildId(guildId: string) {
-    if (!guildId) {
-      this._guildId = "";
-      return;
-    }
-    this._guildId = guildId;
-  }
-
-  set extras(extras: Record<string, unknown>) {
-    this.#extras = extras;
-  }
-
-  get intents(): Array<GatewayIntentBits> {
-    return this._intents;
-  }
-  get clientId(): string {
-    return this._clientId;
-  }
-  get guildId(): string {
-    return this._guildId;
-  }
-  get extras(): Record<string, unknown> {
-    return this.#extras;
-  }
-  get client(): Client {
-    if (!this.#client) throw new Error("Unable to reach Client");
-    return this.#client;
-  }
-
-  get handler(): BaseHandler {
-    return this.#handler;
-  }
-
-  get listener(): BaseListener {
-    return this.#listener;
-  }
-
-  createClient(bits?: Array<GatewayIntentBits>): Client {
-    if (!bits) bits = this.intents;
-    this.#client = new Client({ intents: bits });
-    this.#listener.loadEvent("ready", {
+  createClient(): Client {
+    this.#client = new Client({ intents: this.intents });
+    this.#listener.loadEvent(Events.ClientReady, {
       name: Events.ClientReady,
       once: true,
       execute: (readyClient: Client) => {
         console.log(`${readyClient.user?.tag} is Ready!`);
       },
+    });
+    this.#listener.loadEvent(Events.InteractionCreate, {
+      name: Events.InteractionCreate,
+      once: false,
+      execute: (i) => void this.deployCommands(i),
     });
     this.deployEvents();
     this.#client.once(Events.ClientReady, (readyClient) => {
@@ -189,6 +151,52 @@ class BaseWrapper {
   }
   async deployEvents() {
     this.listener.dispatch(this.client);
+  }
+
+  // Getters and Setters:
+  set clientId(clientId: string) {
+    if (!clientId) {
+      this._clientId = "";
+      return;
+    }
+    this._clientId = clientId;
+  }
+
+  set guildId(guildId: string) {
+    if (!guildId) {
+      this._guildId = "";
+      return;
+    }
+    this._guildId = guildId;
+  }
+
+  set extras(extras: Record<string, unknown>) {
+    this.#extras = extras;
+  }
+
+  get intents(): Array<GatewayIntentBits> {
+    return this._intents;
+  }
+  get clientId(): string {
+    return this._clientId;
+  }
+  get guildId(): string {
+    return this._guildId;
+  }
+  get extras(): Record<string, unknown> {
+    return this.#extras;
+  }
+  get client(): Client {
+    if (!this.#client) throw new Error("Unable to reach Client");
+    return this.#client;
+  }
+
+  get handler(): BaseHandler {
+    return this.#handler;
+  }
+
+  get listener(): BaseListener {
+    return this.#listener;
   }
 }
 
