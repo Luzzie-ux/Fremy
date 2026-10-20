@@ -1,20 +1,7 @@
-import { readAllFiles } from "./Fremy/utils.ts";
+import { readAllFiles, ImportPath } from "./Fremy/utils.ts";
 import { BaseWrapper } from "./Fremy/Wrapper.js";
-import { BaseHandler } from "./Fremy/Handler.js";
-import { Command } from "./Fremy/Handler.js";
+import * as Manager from "./Fremy/Manager.ts";
 
-async function Init(bot: BaseWrapper, path: string) {
-  try {
-    bot.createClient();
-    await bot.startClient();
-  } catch (err: unknown) {
-    console.log(err);
-    throw err;
-  }
-}
-
-export { readAllFiles };
+export { readAllFiles, ImportPath };
 export { BaseWrapper as Fremy };
-export { BaseHandler as Manager };
-export type { Command };
-export { Init };
+export { Manager };
