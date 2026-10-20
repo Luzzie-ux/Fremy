@@ -20,8 +20,8 @@
     "start": "node test.js",
     "env": "node --env-file=.env test.js",
     "lint": "npx eslint && echo $?",
-    "test": "npm run build && npm run lint && npm run start",
-    "test-env": "npm run build && npm run lint && npm run env"
+    "test": "npm run lint && npm run build && npm run start",
+    "test-env": "npm run lint && npm run build && npm run env"
   },
   "dependencies": {
     "discord.js": "^14.27.0"

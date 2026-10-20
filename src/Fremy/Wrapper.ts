@@ -1,5 +1,6 @@
 import { Client, Events, GatewayIntentBits, Interaction } from "discord.js";
-import { BaseHandler, type Command } from "./Handler.js";
+import { BaseHandler, Command } from "./Handler.js";
+import { BaseListener, DiscordEvent } from "./Listener.ts";
 
 type Intent =
   GatewayIntentBits | IntentName | Array<GatewayIntentBits | IntentName>;
@@ -28,7 +29,7 @@ class BaseWrapper {
   // or another wrapper for something part of discord.js
   #client?: Client;
   #handler: BaseHandler = new BaseHandler();
-  #listerner: string = "";
+  #listener: BaseListener = new BaseListener();
 
   constructor(configs: JSONConfig) {
     const { token, intents, clientId, guildId, ...rest } = configs;
@@ -38,7 +39,6 @@ class BaseWrapper {
     this._clientId = valid.clientId;
     this._guildId = valid.guildId;
     this.#extras = rest;
-    void this.#listerner;
   }
 
   static fromEnv(env: NodeJS.ProcessEnv = process.env, prefix?: string) {
@@ -102,17 +102,32 @@ class BaseWrapper {
     return this.#handler;
   }
 
-  create(bits?: Array<GatewayIntentBits>): Client {
+  get listener(): BaseListener {
+    return this.#listener;
+  }
+
+  createClient(bits?: Array<GatewayIntentBits>): Client {
     if (!bits) bits = this.intents;
     this.#client = new Client({ intents: bits });
+    this.#listener.loadEvent("ready", {
+      name: Events.ClientReady,
+      once: true,
+      execute: (readyClient: Client) => {
+        console.log(`${readyClient.user?.tag} is Ready!`);
+      },
+    });
+    this.deployEvents();
     this.#client.once(Events.ClientReady, (readyClient) => {
       console.log(`${readyClient.user.tag} is Ready!`);
     });
-    this.#client.on(Events.InteractionCreate, (i) => void this.dispatch(i));
+    this.#client.on(
+      Events.InteractionCreate,
+      (i) => void this.deployCommands(i),
+    );
     return this.#client;
   }
 
-  async start(): Promise<void> {
+  async startClient(): Promise<void> {
     try {
       await this.client.login(this.#token);
     } catch (err: unknown) {
@@ -121,7 +136,7 @@ class BaseWrapper {
     }
   }
 
-  async stop(): Promise<void> {
+  async stopClient(): Promise<void> {
     try {
       await this.client.destroy();
     } catch (err: unknown) {
@@ -131,28 +146,49 @@ class BaseWrapper {
   }
 
   // Wrappers for BaseHandler methods;
-  async load(path: string): Promise<void>;
-  async load(list: Record<string, Command>): Promise<void>;
-  async load(commands: string | Record<string, Command>): Promise<void> {
+  async loadCommands(): Promise<void>;
+  async loadCommands(path: string): Promise<void>;
+  async loadCommands(list: Record<string, Command>): Promise<void>;
+  async loadCommands(
+    commands?: string | Record<string, Command>,
+  ): Promise<void> {
     if (!commands) return;
     if (typeof commands !== "string") {
-      this.handler.loadList(commands);
+      this.handler.loadCommandList(commands);
     } else {
-      await this.handler.loadPath(commands);
+      await this.handler.loadCommandPath(commands);
     }
   }
-  async register() {
-    await this.handler.register({
+  async registerCommands() {
+    await this.handler.registerCommands({
       token: this.#token,
       clientId: this._clientId,
       guildId: this._guildId,
     });
   }
-  async dispatch(interaction: Interaction) {
-    await this.handler.dispatch(interaction);
+  async deployCommands(interaction: Interaction) {
+    await this.handler.dispatchCommands(interaction);
   }
   get commands() {
     return this.handler.commands;
+  }
+
+  // Wrappers for BaseListener methods;
+  get events() {
+    return this.listener.events;
+  }
+  async loadEvents(
+    events?: string | Record<string, DiscordEvent>,
+  ): Promise<void> {
+    if (!events) return;
+    if (typeof events !== "string") {
+      this.listener.loadEventList(events);
+    } else {
+      await this.listener.loadEventPath(events);
+    }
+  }
+  async deployEvents() {
+    this.listener.dispatch(this.client);
   }
 }
 

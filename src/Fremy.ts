@@ -5,10 +5,10 @@ import { Command } from "./Fremy/Handler.js";
 
 async function Init(bot: BaseWrapper, path: string) {
   try {
-    bot.create();
-    await bot.load(path);
-    await bot.register();
-    await bot.start();
+    bot.createClient();
+    await bot.loadCommands(path);
+    await bot.registerCommands();
+    await bot.startClient();
   } catch (err: unknown) {
     console.log(err);
     throw err;

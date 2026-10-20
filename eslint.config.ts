@@ -12,6 +12,7 @@ export default defineConfig([
       "no-constructor-return": "error",
       "prefer-const": ["warn"],
       "no-await-in-loop": "warn",
+      "no-unused-vars": "off",
     },
     languageOptions: {
       globals: globals.node,

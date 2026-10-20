@@ -9,8 +9,7 @@ import {
   Interaction,
 } from "discord.js";
 
-import { pathToFileURL } from "node:url";
-import { readAllFiles } from "./utils.js";
+import { ImportPath } from "./utils.js";
 
 interface SlashCommand {
   data: SlashCommandBuilder;
@@ -46,7 +45,7 @@ class BaseHandler {
     this.set(name, command);
   }
 
-  loadList(list: Record<string, Command>): void {
+  loadCommandList(list: Record<string, Command>): void {
     if (!list) return;
     Object.entries(list).forEach((entry) => {
       const [key, value] = entry;
@@ -54,15 +53,11 @@ class BaseHandler {
     });
   }
 
-  async loadPath(path: string): Promise<void> {
+  async loadCommandPath(path: string): Promise<void> {
     if (!path) return;
-    const files = [...readAllFiles(path)].filter((file) =>
-      file.endsWith(".js"),
-    );
     try {
-      const imports = await Promise.all(
-        files.map((file) => import(pathToFileURL(file).href)),
-      );
+      const imports = await ImportPath(path);
+      if (!imports) throw new Error("Error when importing commands");
       const commands: Command[] = imports.flatMap((mod) =>
         Object.getOwnPropertyNames(mod)
           .map((name) => mod[name])
@@ -79,7 +74,7 @@ class BaseHandler {
     }
   }
 
-  async register(required: {
+  async registerCommands(required: {
     token: string;
     clientId: string;
     guildId?: string;
@@ -120,7 +115,7 @@ class BaseHandler {
     }
   }
 
-  async dispatch(interaction: Interaction): Promise<void> {
+  async dispatchCommands(interaction: Interaction): Promise<void> {
     if (!interaction.isCommand()) return;
 
     const command = this.get(interaction.commandName);
