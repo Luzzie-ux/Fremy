@@ -9,9 +9,8 @@ import {
   Interaction,
 } from "discord.js";
 
-import * as fs from "node:fs";
-import * as path from "node:path";
 import { pathToFileURL } from "node:url";
+import { readAllFiles } from "./utils.js";
 
 interface SlashCommand {
   data: SlashCommandBuilder;
@@ -170,17 +169,6 @@ class BaseHandler {
 
   has(key: string) {
     return this.commands.has(key);
-  }
-}
-
-function* readAllFiles(dir: string): Generator<string> {
-  const files = fs.readdirSync(dir, { withFileTypes: true });
-  for (const file of files) {
-    if (file.isDirectory()) {
-      yield* readAllFiles(path.join(dir, file.name));
-    } else {
-      yield path.join(dir, file.name);
-    }
   }
 }
 

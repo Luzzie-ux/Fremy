@@ -1,6 +1,7 @@
-import { BaseWrapper } from "./Wrapper.js";
-import { BaseHandler } from "./Handler.js";
-import { Command } from "./Handler.js";
+import { readAllFiles } from "./Fremy/utils.ts";
+import { BaseWrapper } from "./Fremy/Wrapper.js";
+import { BaseHandler } from "./Fremy/Handler.js";
+import { Command } from "./Fremy/Handler.js";
 
 async function Init(bot: BaseWrapper, path: string) {
   try {
@@ -14,6 +15,7 @@ async function Init(bot: BaseWrapper, path: string) {
   }
 }
 
+export { readAllFiles };
 export { BaseWrapper as Fremy };
 export { BaseHandler as Manager };
 export type { Command };
