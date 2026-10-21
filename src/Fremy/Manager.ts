@@ -2,38 +2,23 @@ import {
   Collection,
   ContextMenuCommandBuilder,
   SlashCommandBuilder,
-  Client,
   Routes,
   REST,
   MessageFlags,
+  Events,
 } from "discord.js";
 
-import type { Interaction, InteractionReplyOptions } from "discord.js";
-import { ImportPath } from "./utils.ts";
+import type { Client, Interaction, InteractionReplyOptions } from "discord.js";
+import { ImportPath } from "./utils.js";
 
 abstract class Manager<T> {
-  static count = 0;
   collection: Collection<string, T> = new Collection();
-  isType(value: unknown): value is T {
-    return (
-      typeof value === "object" &&
-      value !== null &&
-      (("data" in value &&
-        (value.data instanceof SlashCommandBuilder ||
-          value.data instanceof ContextMenuCommandBuilder)) ||
-        "name" in value) &&
-      "execute" in value &&
-      typeof value.execute === "function"
-    );
-  }
+  abstract isType(value: unknown): value is T;
   loadItem(name: string, item: T): void {
-    const newName = `(${Manager.count})${name}`;
     if (!name || !item) return;
-    if (this.has(name) || this.has(newName)) {
+    if (this.has(name)) {
       console.warn(`Item ${name} already exists!`);
-      console.warn(`saving as ${newName}`);
-      this.set(newName, item);
-      Manager.count++;
+      return;
     }
     this.set(name, item);
   }
@@ -48,9 +33,7 @@ abstract class Manager<T> {
     const imports = await ImportPath(path);
     if (!imports) throw new Error("Error when importing files");
     return imports.flatMap((mod) =>
-      Object.getOwnPropertyNames(mod)
-        .map((name) => mod[name])
-        .filter((mod): mod is T => this.isType(mod)),
+      Object.getOwnPropertyNames(mod).map((name) => mod[name]),
     );
   }
   abstract loadPath(path: string): Promise<void>;
@@ -71,21 +54,33 @@ abstract class Manager<T> {
   }
 }
 
-interface DiscordCommand {
+interface DiscordJSCommand {
   data: SlashCommandBuilder | ContextMenuCommandBuilder;
   execute: (i: Interaction) => Promise<void>;
 }
 
-class CommandManager extends Manager<DiscordCommand> {
-  isSlash(c: DiscordCommand) {
-    return c.data instanceof SlashCommandBuilder;
+class CommandManager extends Manager<DiscordJSCommand> {
+  override isType(value: unknown): value is DiscordJSCommand {
+    if (typeof value !== "object" || !value) return false;
+    return (
+      "data" in value &&
+      (this.isSlash(value.data) || this.isContext(value.data)) &&
+      "execute" in value &&
+      typeof value.execute === "function"
+    );
   }
-  isContext(c: DiscordCommand) {
-    return c.data instanceof ContextMenuCommandBuilder;
+  isSlash(data: unknown): data is SlashCommandBuilder {
+    return data instanceof SlashCommandBuilder;
   }
+  isContext(data: unknown): data is ContextMenuCommandBuilder {
+    return data instanceof ContextMenuCommandBuilder;
+  }
+
   override async loadPath(path: string): Promise<void> {
     if (!path) return;
-    const commands: DiscordCommand[] = await this._FromPath(path);
+    const commands: DiscordJSCommand[] = (await this._FromPath(path)).filter(
+      (mod): mod is DiscordJSCommand => this.isType(mod),
+    );
     commands.forEach((command) => {
       if (!command?.data) {
         console.warn("Couldnt find command property 'data'");
@@ -165,16 +160,32 @@ class CommandManager extends Manager<DiscordCommand> {
   }
 }
 
-interface DiscordEvent {
+interface DiscordJSEvent {
   name: string;
   once?: boolean;
   execute: (...args: unknown[]) => Promise<void> | void;
 }
 
-class EventManager extends Manager<DiscordEvent> {
+type EventName = keyof typeof Events;
+
+class EventManager extends Manager<DiscordJSEvent> {
+  override isType(value: unknown): value is DiscordJSEvent {
+    if (typeof value !== "object" || !value) return false;
+    return (
+      "name" in value &&
+      this.isEvent(value.name) &&
+      "execute" in value &&
+      typeof value.execute === "function"
+    );
+  }
+  isEvent(name: unknown): name is EventName {
+    return typeof name === "string" && name in Events;
+  }
   override async loadPath(path: string): Promise<void> {
     if (!path) return;
-    const events: DiscordEvent[] = await this._FromPath(path);
+    const events: DiscordJSEvent[] = (await this._FromPath(path)).filter(
+      (mod): mod is DiscordJSEvent => this.isType(mod),
+    );
     events.forEach((event) => {
       if (!event?.name) {
         console.warn("Couldnt find event property 'name'");
@@ -203,4 +214,10 @@ class EventManager extends Manager<DiscordEvent> {
   }
 }
 
-export { Manager, CommandManager, EventManager, DiscordEvent, DiscordCommand };
+export {
+  Manager,
+  CommandManager,
+  EventManager,
+  DiscordJSEvent,
+  DiscordJSCommand,
+};

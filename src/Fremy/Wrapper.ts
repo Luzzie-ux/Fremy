@@ -8,9 +8,9 @@ import {
 import {
   CommandManager,
   EventManager,
-  DiscordEvent,
-  DiscordCommand,
-} from "./Manager.ts";
+  DiscordJSEvent,
+  DiscordJSCommand,
+} from "./Manager.js";
 
 type Intent =
   GatewayIntentBits | IntentName | Array<GatewayIntentBits | IntentName>;
@@ -28,7 +28,7 @@ interface JSONConfig {
   [key: string]: unknown;
 }
 
-class BaseWrapper {
+class Wrapper {
   #token: string;
   #intents: Array<GatewayIntentBits>;
   #clientId: string;
@@ -52,7 +52,7 @@ class BaseWrapper {
 
   static fromEnv(env: NodeJS.ProcessEnv = process.env, prefix?: string) {
     if (!prefix) prefix = "DISCORD_";
-    return new BaseWrapper(toJSON(env, prefix));
+    return new Wrapper(toJSON(env, prefix));
   }
 
   addExtra(key: string, value: unknown) {
@@ -70,7 +70,7 @@ class BaseWrapper {
     }
   }
   async defaults() {
-    const defaultCmds: Record<string, DiscordCommand> = {
+    const defaultCmds: Record<string, DiscordJSCommand> = {
       ping: {
         data: new SlashCommandBuilder()
           .setName("ping")
@@ -81,7 +81,7 @@ class BaseWrapper {
         },
       },
     };
-    const defaultEvents: Record<string, DiscordEvent> = {
+    const defaultEvents: Record<string, DiscordJSEvent> = {
       ready: {
         name: Events.ClientReady,
         once: true,
@@ -136,8 +136,8 @@ class BaseWrapper {
     }
   }
   async loadCmds(path: string): Promise<void>;
-  async loadCmds(list: Record<string, DiscordCommand>): Promise<void>;
-  async loadCmds(commands: string | Record<string, DiscordCommand>) {
+  async loadCmds(list: Record<string, DiscordJSCommand>): Promise<void>;
+  async loadCmds(commands: string | Record<string, DiscordJSCommand>) {
     if (!commands) return;
     if (typeof commands === "string") {
       await this.commands.loadPath(commands);
@@ -147,8 +147,8 @@ class BaseWrapper {
   }
 
   async loadEvents(path: string): Promise<void>;
-  async loadEvents(list: Record<string, DiscordEvent>): Promise<void>;
-  async loadEvents(events: string | Record<string, DiscordEvent>) {
+  async loadEvents(list: Record<string, DiscordJSEvent>): Promise<void>;
+  async loadEvents(events: string | Record<string, DiscordJSEvent>) {
     if (!events) return;
     if (typeof events === "string") {
       await this.events.loadPath(events);
@@ -271,4 +271,4 @@ function toJSON(env: NodeJS.ProcessEnv, prefix: string): JSONConfig {
   };
 }
 
-export { BaseWrapper };
+export { Wrapper as Fremy };

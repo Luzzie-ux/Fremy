@@ -20,11 +20,8 @@
   ],
   "scripts": {
     "build": "rm -rf ./dist && npx tsc",
-    "start": "node test.js",
-    "env": "node --env-file=.env test.js",
-    "lint": "npx eslint && echo $?",
-    "test": "npm run lint && npm run build && npm run start",
-    "test-env": "npm run lint && npm run build && npm run env"
+    "lint": "npx eslint",
+    "dist": "npm run lint && npm run build"
   },
   "dependencies": {
     "discord.js": "^14.27.0"
