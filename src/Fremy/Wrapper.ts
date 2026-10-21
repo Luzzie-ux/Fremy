@@ -1,10 +1,4 @@
-import {
-  Client,
-  Events,
-  GatewayIntentBits,
-  Interaction,
-  SlashCommandBuilder,
-} from "discord.js";
+import { Client, Events, GatewayIntentBits, Interaction } from "discord.js";
 import {
   CommandManager,
   EventManager,
@@ -72,19 +66,8 @@ class Wrapper {
       else this.intents.push(value);
     }
   }
-  async defaults() {
-    const defaultCmds: Record<string, DiscordJSCommand> = {
-      ping: {
-        data: new SlashCommandBuilder()
-          .setName("ping")
-          .setDescription("Answers with pong"),
-        async execute(interaction: Interaction) {
-          if (!interaction.isChatInputCommand()) return;
-          await interaction.reply("Pong!");
-        },
-      },
-    };
-    const defaultEvents: Record<string, DiscordJSEvent> = {
+  async loadDefaults() {
+    await this.loadEvents({
       ready: {
         name: Events.ClientReady,
         once: true,
@@ -100,10 +83,9 @@ class Wrapper {
           void this.dispatchCmds(i);
         },
       },
-    };
-    await this.loadCmds(defaultCmds);
-    await this.loadEvents(defaultEvents);
+    });
   }
+
   createClient(): Client {
     this.#client = new Client({ intents: this.intents });
     return this.#client;
@@ -157,14 +139,11 @@ class Wrapper {
     }
   }
 
-  async registerCmds(guild: boolean) {
-    let guildId: string | undefined;
-    if (guild && this.guildId) guildId = this.guildId;
-    else guildId = undefined;
+  async registerCmds() {
     await this.commands.register({
       token: this.#token,
       clientId: this.clientId,
-      guildId,
+      guildId: this.guildId,
     });
   }
 
