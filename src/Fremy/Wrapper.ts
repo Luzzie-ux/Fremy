@@ -103,9 +103,6 @@ class Wrapper {
   }
   createClient(): Client {
     this.#client = new Client({ intents: this.intents });
-    let guild: boolean = false;
-    if (this.guildId) guild = true;
-    this.registerCmds(guild);
     return this.#client;
   }
 
