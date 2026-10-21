@@ -51,12 +51,15 @@ class Wrapper {
   }
 
   static fromEnv(env: NodeJS.ProcessEnv = process.env, prefix?: string) {
-    if (!prefix) prefix = "DISCORD_";
+    if (!prefix || prefix.trim() === "") prefix = "DISCORD_";
     return new Wrapper(toJSON(env, prefix));
   }
 
   addExtra(key: string, value: unknown) {
-    if (key === "") throw new Error("Key shouldn't be an empty string");
+    if (key === "") {
+      console.warn("Key shouldn't be an empty string");
+      return;
+    }
     this.extras[key] = value;
   }
 
@@ -65,8 +68,8 @@ class Wrapper {
     if (!Array.isArray(intents)) intents = [intents];
     for (const value of intents) {
       if (!value) throw new Error(`Invalid Intent`);
-      if (typeof value === "string") this.#intents.push(toIntent(value));
-      else this.#intents.push(value);
+      if (typeof value === "string") this.intents.push(toIntent(value));
+      else this.intents.push(value);
     }
   }
   async defaults() {
@@ -156,7 +159,7 @@ class Wrapper {
 
   async registerCmds(guild: boolean) {
     let guildId: string | undefined;
-    if (guild) guildId = this.guildId;
+    if (guild && this.guildId) guildId = this.guildId;
     else guildId = undefined;
     await this.commands.register({
       token: this.#token,
@@ -241,7 +244,6 @@ function camelCase(s: string): string {
 function toJSON(env: NodeJS.ProcessEnv, prefix: string): JSONConfig {
   const config = new Map<string, string>();
   let msg: string = "";
-
   for (const [key, value] of Object.entries(env)) {
     if (key.startsWith(prefix)) {
       if (value === "undefined" || value === undefined) {
