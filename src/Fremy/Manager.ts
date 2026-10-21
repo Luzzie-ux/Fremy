@@ -203,4 +203,4 @@ class EventManager extends Manager<DiscordEvent> {
   }
 }
 
-export { CommandManager, EventManager, DiscordEvent, DiscordCommand };
+export { Manager, CommandManager, EventManager, DiscordEvent, DiscordCommand };

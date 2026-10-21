@@ -2,11 +2,19 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 
-async function ImportPath(path: string) {
-  if (!path) return;
-  const files = [...readAllFiles(path)].filter((file) => file.endsWith(".js"));
+async function ImportPath(pathname: string) {
+  if (!pathname) return;
+  const files = [...readAllFiles(pathname)].filter((file) =>
+    file.endsWith(".js"),
+  );
   const imports = await Promise.all(
-    files.map((file) => import(pathToFileURL(file).href)),
+    files.map((file) =>
+      import(pathToFileURL(file).href).catch((err) => {
+        throw new Error(`Failed to import ${file}: ${err.message}`, {
+          cause: err,
+        });
+      }),
+    ),
   );
   return imports;
 }

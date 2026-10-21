@@ -1,4 +1,10 @@
-import { Client, Events, GatewayIntentBits, Interaction } from "discord.js";
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  Interaction,
+  SlashCommandBuilder,
+} from "discord.js";
 import {
   CommandManager,
   EventManager,
@@ -63,9 +69,18 @@ class BaseWrapper {
       else this.#intents.push(value);
     }
   }
-
-  createClient(): Client {
-    this.#client = new Client({ intents: this.intents });
+  async defaults() {
+    const defaultCmds: Record<string, DiscordCommand> = {
+      ping: {
+        data: new SlashCommandBuilder()
+          .setName("ping")
+          .setDescription("Answers with pong"),
+        async execute(interaction: Interaction) {
+          if (!interaction.isChatInputCommand()) return;
+          await interaction.reply("Pong!");
+        },
+      },
+    };
     const defaultEvents: Record<string, DiscordEvent> = {
       ready: {
         name: Events.ClientReady,
@@ -83,7 +98,14 @@ class BaseWrapper {
         },
       },
     };
-    this.loadEvents(defaultEvents);
+    await this.loadCmds(defaultCmds);
+    await this.loadEvents(defaultEvents);
+  }
+  createClient(): Client {
+    this.#client = new Client({ intents: this.intents });
+    let guild: boolean = false;
+    if (this.guildId) guild = true;
+    this.registerCmds(guild);
     return this.#client;
   }
 
@@ -93,6 +115,7 @@ class BaseWrapper {
         console.warn("Unable to reach client: no instance found");
         return;
       }
+      this.events.deploy(this.client);
       await this.client.login(this.#token);
     } catch (err: unknown) {
       if (err instanceof Error) console.error(err.message);
@@ -112,7 +135,8 @@ class BaseWrapper {
       throw err;
     }
   }
-
+  async loadCmds(path: string): Promise<void>;
+  async loadCmds(list: Record<string, DiscordCommand>): Promise<void>;
   async loadCmds(commands: string | Record<string, DiscordCommand>) {
     if (!commands) return;
     if (typeof commands === "string") {
@@ -122,6 +146,8 @@ class BaseWrapper {
     }
   }
 
+  async loadEvents(path: string): Promise<void>;
+  async loadEvents(list: Record<string, DiscordEvent>): Promise<void>;
   async loadEvents(events: string | Record<string, DiscordEvent>) {
     if (!events) return;
     if (typeof events === "string") {

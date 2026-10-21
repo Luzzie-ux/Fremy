@@ -1,12 +1,12 @@
-import { Manager } from "./dist/Fremy.js";
+import { Fremy } from "./dist/Fremy.js";
+import configs from "./.config.json" with { type: "json" };
 
 try {
-  const cmd = new Manager.CommandManager();
-  await cmd.loadPath("./dist/Commands");
-  const evt = new Manager.EventManager();
-  await evt.loadPath("./dist/Events/client");
-  console.log(cmd.collection.size);
-  console.log(evt.collection.size);
+  const FremyBot = new Fremy(configs);
+  FremyBot.createClient();
+  await FremyBot.loadCmds("./dist/Commands");
+  await FremyBot.registerCmds(false);
+  await FremyBot.startClient();
 } catch (err) {
   console.log(err);
 }
