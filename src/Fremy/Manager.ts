@@ -82,10 +82,6 @@ class CommandManager extends Manager<DiscordJSCommand> {
       (mod): mod is DiscordJSCommand => this.isType(mod),
     );
     commands.forEach((command) => {
-      if (!command?.data) {
-        console.warn("Couldnt find command property 'data'");
-        return;
-      }
       const type = command.data.toJSON().type ?? 1;
       this.loadItem(`${type}:${command.data.name}`, command);
     });
@@ -137,16 +133,17 @@ class CommandManager extends Manager<DiscordJSCommand> {
     if (!command) return;
 
     try {
-      if (interaction.isChatInputCommand() && this.isSlash(command)) {
+      if (interaction.isChatInputCommand() && this.isSlash(command.data)) {
         await command.execute(interaction);
       } else if (
         interaction.isContextMenuCommand() &&
-        this.isContext(command)
+        this.isContext(command.data)
       ) {
         await command.execute(interaction);
-      } else throw new Error(`Unknown command type ${interaction.commandName}`);
+      } else throw new Error("Unknown Command Type");
     } catch (err: unknown) {
-      console.error(`Error with command ${interaction.commandName}`, err);
+      if (!(err instanceof Error)) console.log(err);
+      else console.error(`Command ${interaction.commandName} - `, err.message);
       if (interaction.isRepliable()) {
         const msg: InteractionReplyOptions = {
           content: "Something went wrong.",
@@ -187,10 +184,6 @@ class EventManager extends Manager<DiscordJSEvent> {
       (mod): mod is DiscordJSEvent => this.isType(mod),
     );
     events.forEach((event) => {
-      if (!event?.name) {
-        console.warn("Couldnt find event property 'name'");
-        return;
-      }
       this.loadItem(event.name, event);
     });
   }
@@ -201,7 +194,8 @@ class EventManager extends Manager<DiscordJSEvent> {
         try {
           event.execute(...args);
         } catch (err: unknown) {
-          console.error(`Error in event ${event.name}`, err);
+          if (!(err instanceof Error)) console.log(err);
+          else console.error(`event ${event.name}`, err.message);
         }
       };
 
