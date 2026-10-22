@@ -80,7 +80,12 @@ class Wrapper {
         name: Events.InteractionCreate,
         execute: (...[interaction]) => {
           const i = interaction as Interaction;
-          void this.dispatchCmds(i);
+          this.dispatchCmds(i).catch((err: unknown) => {
+            console.error(
+              "Unhandled error while dispatching interaction:",
+              err,
+            );
+          });
         },
       },
     });

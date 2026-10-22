@@ -17,7 +17,7 @@ abstract class Manager<T> {
   loadItem(name: string, item: T): void {
     if (!name || !item) return;
     if (this.has(name)) {
-      console.warn(`Item ${name} already exists!`);
+      console.error(`Item ${name} already exists!`);
       return;
     }
     this.set(name, item);
@@ -31,10 +31,8 @@ abstract class Manager<T> {
   }
   async _FromPath(path: string): Promise<T[]> {
     const imports = await ImportPath(path);
-    if (!imports) throw new Error("Error when importing files");
-    return imports.flatMap((mod) =>
-      Object.getOwnPropertyNames(mod).map((name) => mod[name]),
-    );
+    if (!imports) throw new Error("Problem with Importing given files");
+    return [...new Set<T>(imports.flatMap((mod) => Object.values(mod)))];
   }
   abstract loadPath(path: string): Promise<void>;
   get keys() {
@@ -82,8 +80,7 @@ class CommandManager extends Manager<DiscordJSCommand> {
       (mod): mod is DiscordJSCommand => this.isType(mod),
     );
     commands.forEach((command) => {
-      const type = command.data.toJSON().type ?? 1;
-      this.loadItem(`${type}:${command.data.name}`, command);
+      this.loadItem(command.data.name, command);
     });
   }
 
@@ -118,41 +115,42 @@ class CommandManager extends Manager<DiscordJSCommand> {
       console.log(
         `Successfully reloaded ${data.length} application (/) commands.`,
       );
-    } catch (err: unknown) {
-      console.error(`Error while registring commands`, err);
-      throw err;
+    } catch (dispatchErr: unknown) {
+      const reason =
+        dispatchErr instanceof Error ? dispatchErr.message : dispatchErr;
+      console.error(`Error while registring commands`, reason);
+      throw dispatchErr;
     }
   }
 
   async dispatch(interaction: Interaction): Promise<void> {
     if (!interaction.isCommand()) return;
-
-    const command = this.get(
-      `${interaction.commandType}:${interaction.commandName}`,
-    );
+    const command = this.get(interaction.commandName);
     if (!command) return;
-
     try {
-      if (interaction.isChatInputCommand() && this.isSlash(command.data)) {
-        await command.execute(interaction);
-      } else if (
-        interaction.isContextMenuCommand() &&
-        this.isContext(command.data)
-      ) {
-        await command.execute(interaction);
-      } else throw new Error("Unknown Command Type");
+      await command.execute(interaction);
     } catch (err: unknown) {
-      if (!(err instanceof Error)) console.log(err);
-      else console.error(`Command ${interaction.commandName} - `, err.message);
-      if (interaction.isRepliable()) {
-        const msg: InteractionReplyOptions = {
-          content: "Something went wrong.",
-          flags: MessageFlags.Ephemeral,
-        };
-        if (interaction.replied || interaction.deferred)
-          await interaction.followUp(msg);
-        else await interaction.reply(msg);
-      }
+      const reason = err instanceof Error ? err.message : err;
+      console.error(`Command ${interaction.commandName} failed - ${reason}`);
+      await this._replyWithError(interaction);
+    }
+  }
+
+  private async _replyWithError(interaction: Interaction): Promise<void> {
+    if (!interaction.isRepliable()) return;
+    const msg: InteractionReplyOptions = {
+      content: "Something went wrong.",
+      flags: MessageFlags.Ephemeral,
+    };
+    try {
+      if (interaction.replied || interaction.deferred)
+        await interaction.followUp(msg);
+      else await interaction.reply(msg);
+    } catch (replyErr: unknown) {
+      console.error(
+        "Failed to send error response:",
+        replyErr instanceof Error ? replyErr.message : replyErr,
+      );
     }
   }
 }
@@ -163,7 +161,7 @@ interface DiscordJSEvent {
   execute: (...args: unknown[]) => Promise<void> | void;
 }
 
-type EventName = keyof typeof Events;
+const EVENT_NAMES: readonly unknown[] = Object.values(Events);
 
 class EventManager extends Manager<DiscordJSEvent> {
   override isType(value: unknown): value is DiscordJSEvent {
@@ -175,8 +173,8 @@ class EventManager extends Manager<DiscordJSEvent> {
       typeof value.execute === "function"
     );
   }
-  isEvent(name: unknown): name is EventName {
-    return typeof name === "string" && name in Events;
+  isEvent(name: unknown): name is Events {
+    return EVENT_NAMES.includes(name);
   }
   override async loadPath(path: string): Promise<void> {
     if (!path) return;
@@ -189,22 +187,20 @@ class EventManager extends Manager<DiscordJSEvent> {
   }
 
   deploy(client: Client): void {
-    this.collection.forEach((event) => {
+    for (const event of this.values) {
       const handler = async (...args: unknown[]) => {
         try {
-          event.execute(...args);
-        } catch (err: unknown) {
-          if (!(err instanceof Error)) console.log(err);
-          else console.error(`event ${event.name}`, err.message);
+          await event.execute(...args);
+        } catch (eventErr: unknown) {
+          const reason =
+            eventErr instanceof Error ? eventErr.message : eventErr;
+          console.error(`Event ${event.name} - ${reason}`);
         }
       };
 
-      if (event.once) {
-        client.once(event.name, handler);
-      } else {
-        client.on(event.name, handler);
-      }
-    });
+      if (event.once) client.once(event.name, handler);
+      else client.on(event.name, handler);
+    }
   }
 }
 
