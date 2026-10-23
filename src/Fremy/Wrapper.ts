@@ -36,7 +36,7 @@ class Wrapper {
     const { token, intents, clientId, guildId, ...rest } = configs;
     const valid = validate({ token, intents, clientId, guildId });
     this.#token = valid.token;
-    this.#intents = valid.intents;
+    this.#intents = valid.intents.;
     this.#clientId = valid.clientId;
     this.#guildId = valid.guildId;
     this.#extras = rest;
@@ -49,7 +49,7 @@ class Wrapper {
     return new Wrapper(toJSON(env, prefix));
   }
 
-  addExtra(key: string, value: unknown) {
+  addExtra(key: string, value: unknown): void {
     if (key === "") {
       console.warn("Key shouldn't be an empty string");
       return;
@@ -57,7 +57,7 @@ class Wrapper {
     this.extras[key] = value;
   }
 
-  addIntents(intents: Intent) {
+  addIntents(intents: Intent): void {
     if (!intents) return;
     if (!Array.isArray(intents)) intents = [intents];
     for (const value of intents) {
@@ -66,33 +66,31 @@ class Wrapper {
       else this.intents.push(value);
     }
   }
-  async loadDefaults() {
-    await this.loadEvents({
-      ready: {
-        name: Events.ClientReady,
-        once: true,
-        execute(...[readyClient]) {
-          const client: Client = readyClient as Client;
-          console.log(`${client.user?.tag} is ready!`);
-        },
+
+  loadDefaults(): void {
+    const ready = {
+      name: Events.ClientReady,
+      once: true,
+      execute(...[readyClient]: unknown[]) {
+        const client: Client = readyClient as Client;
+        console.log(`${client.user?.tag} is ready!`);
       },
-      interaction: {
-        name: Events.InteractionCreate,
-        execute: (...[interaction]) => {
-          const i = interaction as Interaction;
-          this.dispatchCmds(i).catch((err: unknown) => {
-            console.error(
-              "Unhandled error while dispatching interaction:",
-              err,
-            );
-          });
-        },
-      },
-    });
+    };
+    this.events.loadItem(ready.name, ready);
   }
 
   createClient(): Client {
     this.#client = new Client({ intents: this.intents });
+    const event = {
+      name: Events.InteractionCreate,
+      execute: (...[interaction]: unknown[]) => {
+        const int = interaction as Interaction;
+        this.dispatchCmds(int).catch((err) => {
+          console.error("Unhandled error while dispatching interaction: ", err);
+        });
+      },
+    };
+    this.events.loadItem(event.name, event);
     return this.#client;
   }
 
