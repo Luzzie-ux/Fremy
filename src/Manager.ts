@@ -24,16 +24,22 @@ interface DiscordJSEvent {
   execute: (...args: unknown[]) => Promise<void> | void;
 }
 
-const SLASH = new SlashCommandBuilder();
-const CONTEXT = new ContextMenuCommandBuilder();
 const EVENT_NAMES: readonly unknown[] = Object.values(Events);
 
 export function isSlash(data: unknown): data is SlashCommandBuilder {
-  return Object.getPrototypeOf(data) === Object.getPrototypeOf(SLASH);
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    data.constructor.name === "SlashCommandBuilder"
+  );
 }
 
 export function isContext(data: unknown): data is ContextMenuCommandBuilder {
-  return Object.getPrototypeOf(data) === Object.getPrototypeOf(CONTEXT);
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    data.constructor.name === "ContextMenuCommandBuilder"
+  );
 }
 
 export function isEvent(name: unknown): name is Events {
