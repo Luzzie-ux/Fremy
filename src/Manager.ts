@@ -24,14 +24,16 @@ interface DiscordJSEvent {
   execute: (...args: unknown[]) => Promise<void> | void;
 }
 
+const SLASH = new SlashCommandBuilder();
+const CONTEXT = new ContextMenuCommandBuilder();
 const EVENT_NAMES: readonly unknown[] = Object.values(Events);
 
 export function isSlash(data: unknown): data is SlashCommandBuilder {
-  return typeof data === typeof SlashCommandBuilder;
+  return Object.getPrototypeOf(data) === Object.getPrototypeOf(SLASH);
 }
 
 export function isContext(data: unknown): data is ContextMenuCommandBuilder {
-  return typeof data === typeof ContextMenuCommandBuilder;
+  return Object.getPrototypeOf(data) === Object.getPrototypeOf(CONTEXT);
 }
 
 export function isEvent(name: unknown): name is Events {
@@ -42,6 +44,7 @@ abstract class Manager<T> {
   collection: Collection<string, T> = new Collection();
 
   abstract isType(value: unknown): value is T;
+  abstract loadPath(path: string): Promise<void>;
 
   loadItem(name: string, item: T): void {
     if (!name || !item) return;
@@ -51,12 +54,14 @@ abstract class Manager<T> {
     }
     this.set(name, item);
   }
+
   loadList(list: Record<string, T>): void {
     if (!list) return;
     for (const [key, value] of Object.entries(list)) {
       this.loadItem(key, value);
     }
   }
+
   async __load__(dir: string, isValid: (v: unknown) => v is T): Promise<T[]> {
     console.log(`--- Loading files from ${dir} ---`);
     const items: T[] = [];
@@ -66,7 +71,6 @@ abstract class Manager<T> {
     })) {
       const root = resolve(dir, file);
       const url = pathToFileURL(root).href;
-
       const mod: Record<string, unknown> = await import(url);
       for (const value of Object.values(mod)) {
         if (isValid(value)) items.push(value);
@@ -75,7 +79,7 @@ abstract class Manager<T> {
     }
     return items;
   }
-  abstract loadPath(path: string): Promise<void>;
+
   get keys() {
     return [...this.collection.keys()];
   }
@@ -106,10 +110,9 @@ class CommandManager extends Manager<DiscordJSCommand> {
 
   override async loadPath(path: string): Promise<void> {
     if (!path) return;
-    const cmds = await this.__load__(path, this.isType);
-    for (const cmd of cmds) {
-      this.loadItem(cmd.data.name, cmd);
-    }
+    [...(await this.__load__(path, this.isType))].map((cmd) =>
+      this.loadItem(cmd.data.name, cmd),
+    );
   }
 
   async register(required: {
