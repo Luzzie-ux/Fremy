@@ -1,11 +1,12 @@
 {
   "name": "Fremy",
   "version": "1.0.0",
-  "description": "discord.js wrapper",
+  "description": "A Framework for discord.js ",
   "keywords": [
     "discord",
     "discord.js",
-    "wrapper"
+    "framework",
+    "bot"
   ],
   "repository": {
     "type": "github",
@@ -16,13 +17,13 @@
   "type": "module",
   "main": "dist/Fremy.js",
   "files": [
-    "dist"
+    "dist",
+    "types"
   ],
   "scripts": {
     "build": "rm -rf ./dist && npx tsc",
     "lint": "npx eslint",
-    "dist": "npm run lint && npm run build",
-    "pkg": "npm pack"
+    "dist": "npm run lint && npm run build"
   },
   "dependencies": {
     "discord.js": "^14.27.0"
