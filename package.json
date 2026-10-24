@@ -18,7 +18,10 @@
   "main": "dist/Fremy.js",
   "files": [
     "dist",
-    "typing"
+    "typing",
+    "README.md",
+    "LICENSE",
+    "package.json"
   ],
   "scripts": {
     "clean": "rm -rf ./dist ./typings",
