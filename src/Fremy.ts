@@ -7,6 +7,9 @@ import {
   DiscordJSCommand,
 } from "./Manager.js";
 
+const DEFAULT_COMMANDS_PATH = "./node_modules/Fremy/dist/Commands";
+const DEFAULT_EVENTS_PATH = "./node_modules/Fremy/dist/Events";
+
 type Intent =
   GatewayIntentBits | IntentName | Array<GatewayIntentBits | IntentName>;
 type IntentName = keyof typeof GatewayIntentBits;
@@ -73,25 +76,27 @@ class Wrapper {
     return this.#client;
   }
 
-  async startClient(): Promise<void> {
+  async startClient(load_defaults: boolean = true): Promise<void> {
     if (!this.client) {
       console.warn("Unable to reach client: no instance found");
       return;
     }
     try {
-      await this.loadCmds("Commands");
-      await this.loadEvents("Events");
-      await this.loadEvents({
-        dispatch: {
-          name: Events.InteractionCreate,
-          execute: (...[interaction]: unknown[]) => {
-            const int = interaction as Interaction;
-            this.dispatchCmds(int).catch((err) => {
-              console.error("Unhandled error: ", err);
-            });
+      if (load_defaults) {
+        await this.loadCmds(DEFAULT_COMMANDS_PATH);
+        await this.loadEvents(DEFAULT_EVENTS_PATH);
+        await this.loadEvents({
+          dispatch: {
+            name: Events.InteractionCreate,
+            execute: (...[interaction]: unknown[]) => {
+              const int = interaction as Interaction;
+              this.dispatchCmds(int).catch((err) => {
+                console.error("Unhandled error: ", err);
+              });
+            },
           },
-        },
-      });
+        });
+      }
       await this.registerCmds();
       this.deployEvents(this.client);
       await this.client.login(this.#token);

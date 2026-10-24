@@ -1,7 +1,7 @@
 {
-  "name": "@luzzie-ux/Fremy",
+  "name": "Fremy",
   "version": "1.0.0",
-  "description": "discord.js client wrapper",
+  "description": "discord.js wrapper",
   "keywords": [
     "discord",
     "discord.js",

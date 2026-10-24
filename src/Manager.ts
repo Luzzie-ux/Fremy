@@ -26,15 +26,15 @@ interface DiscordJSEvent {
 
 const EVENT_NAMES: readonly unknown[] = Object.values(Events);
 
-function isSlash(data: unknown): data is SlashCommandBuilder {
-  return data instanceof SlashCommandBuilder;
+export function isSlash(data: unknown): data is SlashCommandBuilder {
+  return typeof data === typeof SlashCommandBuilder;
 }
 
-function isContext(data: unknown): data is ContextMenuCommandBuilder {
-  return data instanceof ContextMenuCommandBuilder;
+export function isContext(data: unknown): data is ContextMenuCommandBuilder {
+  return typeof data === typeof ContextMenuCommandBuilder;
 }
 
-function isEvent(name: unknown): name is Events {
+export function isEvent(name: unknown): name is Events {
   return EVENT_NAMES.includes(name);
 }
 
@@ -53,12 +53,12 @@ abstract class Manager<T> {
   }
   loadList(list: Record<string, T>): void {
     if (!list) return;
-    Object.entries(list).forEach((entry) => {
-      const [key, value] = entry;
+    for (const [key, value] of Object.entries(list)) {
       this.loadItem(key, value);
-    });
+    }
   }
   async __load__(dir: string, isValid: (v: unknown) => v is T): Promise<T[]> {
+    console.log(`--- Loading files from ${dir} ---`);
     const items: T[] = [];
     for (const file of globSync("**/*.{js,ts}", {
       cwd: dir,
@@ -70,7 +70,7 @@ abstract class Manager<T> {
       const mod: Record<string, unknown> = await import(url);
       for (const value of Object.values(mod)) {
         if (isValid(value)) items.push(value);
-        else console.warn(`Invalid export in ${url}`);
+        else console.warn(`Invalid export in ${url}: ${typeof value}`);
       }
     }
     return items;
