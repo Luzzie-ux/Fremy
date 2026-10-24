@@ -1,9 +1,0 @@
-node_modules/
-src/
-
-.gitignore
-.npmignore
-
-eslint.config.ts
-tsconfig.json
-package-lock.json
