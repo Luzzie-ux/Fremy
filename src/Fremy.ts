@@ -5,6 +5,9 @@ import {
   EventManager,
   DiscordJSEvent,
   DiscordJSCommand,
+  isSlash,
+  isContext,
+  isEvent,
 } from "./Manager.js";
 
 const DEFAULT_COMMANDS_PATH = "./node_modules/Fremy/dist/Commands";
@@ -263,4 +266,7 @@ export {
   CommandManager,
   DiscordJSEvent,
   DiscordJSCommand,
+  isSlash,
+  isContext,
+  isEvent,
 };

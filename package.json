@@ -21,7 +21,8 @@
   "scripts": {
     "build": "rm -rf ./dist && npx tsc",
     "lint": "npx eslint",
-    "dist": "npm run lint && npm run build"
+    "dist": "npm run lint && npm run build",
+    "pkg": "npm pack"
   },
   "dependencies": {
     "discord.js": "^14.27.0"

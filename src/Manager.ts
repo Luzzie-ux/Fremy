@@ -73,7 +73,7 @@ abstract class Manager<T> {
     const items: T[] = [];
     for (const file of globSync("**/*.{js,ts}", {
       cwd: dir,
-      exclude: ["**/*.d.ts", "**/*.map.*", "**/*.test.*"],
+      exclude: ["**/*.d.ts", "**/*.test.*"],
     })) {
       const root = resolve(dir, file);
       const url = pathToFileURL(root).href;
