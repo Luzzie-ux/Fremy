@@ -18,10 +18,11 @@
   "main": "dist/Fremy.js",
   "files": [
     "dist",
-    "types"
+    "typing"
   ],
   "scripts": {
-    "build": "rm -rf ./dist && npx tsc",
+    "clean": "rm -rf ./dist ./typings",
+    "build": "npm run clean && npx tsc",
     "lint": "npx eslint",
     "dist": "npm run lint && npm run build"
   },

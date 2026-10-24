@@ -1,7 +1,10 @@
-.env
-.config.json
+# Hidden Files:
+.npmignore
+
+# Folders:
 node_modules
-package-lock.json
+typings
 dist
-test.js
-test
+
+# Files:
+package-lock.json

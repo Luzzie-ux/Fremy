@@ -39,13 +39,13 @@ Fremy takes a plain object, typically loaded from a `.json` file:
 }
 ```
 
-| Key        | Required | Default      | Description                                                                 |
-| ---------- | -------- | ------------ | --------------------------------------------------------------------------- |
-| `token`    | yes      | -            | Your bot token.                                                             |
-| `intents`  | no       | `["Guilds"]` | Names from discord.js `GatewayIntentBits`. Invalid names throw an error.    |
-| `clientId` | no*      | `""`         | Your bot's application ID. *Needed to register commands.                    |
-| `guildId`  | no       | `""`         | If set, commands are registered only in that server; otherwise globally.    |
-| other keys | no       | -            | Stored in `bot.extras`.                                                     |
+| Key        | Required | Default      | Description                                                              |
+| ---------- | -------- | ------------ | ------------------------------------------------------------------------ |
+| `token`    | yes      | -            | Your bot token.                                                          |
+| `intents`  | no       | `["Guilds"]` | Names from discord.js `GatewayIntentBits`. Invalid names throw an error. |
+| `clientId` | no*      | `""`         | Your bot's application ID. *Needed to register commands.                 |
+| `guildId`  | no       | `""`         | If set, commands are registered only in that server; otherwise globally. |
+| other keys | no       | -            | Stored in `bot.extras`.                                                  |
 
 ### Using environment variables
 
@@ -61,7 +61,7 @@ DISCORD_GUILD_ID=...
 ```ts
 import { Fremy } from "Fremy";
 
-const bot = Fremy.fromEnv();            // prefix "DISCORD_"
+const bot = Fremy.fromEnv(); // prefix "DISCORD_"
 const other = Fremy.fromEnv(process.env, "MYBOT_"); // custom prefix
 ```
 
@@ -166,22 +166,22 @@ Default files are read from `./node_modules/Fremy/dist/Commands` and `./node_mod
 
 ## API overview
 
-| Member                                  | Description                                                    |
-| --------------------------------------- | -------------------------------------------------------------- |
-| `new Fremy(config)`                     | Create an instance from a config object                        |
-| `Fremy.fromEnv(env?, prefix?)`          | Create an instance from environment variables                  |
-| `createClient()`                        | Create and return the discord.js `Client`                      |
-| `startClient(loadDefaults?)`            | Load, register, deploy and log in                              |
-| `stopClient()`                          | Destroy the client                                             |
-| `loadCmds(pathOrObject)`                | Load commands                                                  |
-| `loadEvents(pathOrObject)`              | Load events                                                    |
-| `registerCmds()`                        | Register loaded commands with Discord                          |
-| `dispatchCmds(interaction)`             | Run the matching command for an interaction                    |
-| `deployEvents(client)`                  | Attach loaded events to a client                               |
-| `addIntents(intents)`                   | Add intents by name or `GatewayIntentBits` value               |
-| `addExtra(key, value)`                  | Store extra data on the instance                               |
-| `clientId`, `guildId`, `extras`         | Getters/setters for config values                              |
-| `intents`, `client`, `commands`, `events` | Read-only accessors                                          |
+| Member                                    | Description                                      |
+| ----------------------------------------- | ------------------------------------------------ |
+| `new Fremy(config)`                       | Create an instance from a config object          |
+| `Fremy.fromEnv(env?, prefix?)`            | Create an instance from environment variables    |
+| `createClient()`                          | Create and return the discord.js `Client`        |
+| `startClient(loadDefaults?)`              | Load, register, deploy and log in                |
+| `stopClient()`                            | Destroy the client                               |
+| `loadCmds(pathOrObject)`                  | Load commands                                    |
+| `loadEvents(pathOrObject)`                | Load events                                      |
+| `registerCmds()`                          | Register loaded commands with Discord            |
+| `dispatchCmds(interaction)`               | Run the matching command for an interaction      |
+| `deployEvents(client)`                    | Attach loaded events to a client                 |
+| `addIntents(intents)`                     | Add intents by name or `GatewayIntentBits` value |
+| `addExtra(key, value)`                    | Store extra data on the instance                 |
+| `clientId`, `guildId`, `extras`           | Getters/setters for config values                |
+| `intents`, `client`, `commands`, `events` | Read-only accessors                              |
 
 Also exported: `Manager`, `CommandManager`, `EventManager`, the `DiscordJSCommand` / `DiscordJSEvent` types, and the type guards `isSlash`, `isContext`, `isEvent`.
 
@@ -193,7 +193,7 @@ npm run build   # clean dist/ and compile with tsc
 npm run dist    # lint, then build
 ```
 
-Source lives in `src/`, compiled output goes to `dist/`, and type declarations to `types/`.
+Source lives in `src/`, compiled output goes to `dist/`, and type declarations to `typings/`.
 
 ## License
 

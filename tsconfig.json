@@ -9,7 +9,7 @@
     "rewriteRelativeImportExtensions": true,
     "skipLibCheck": true,
     "declaration": true,
-    "declarationDir": "types",
+    "declarationDir": "typings",
     "declarationMap": true,
     "types": ["node", "typescript"],
     "strict": true,
