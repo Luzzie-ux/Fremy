@@ -36,7 +36,7 @@ class Wrapper {
     const { token, intents, clientId, guildId, ...rest } = configs;
     const valid = validate({ token, intents, clientId, guildId });
     this.#token = valid.token;
-    this.#intents = valid.intents.;
+    this.#intents = valid.intents;
     this.#clientId = valid.clientId;
     this.#guildId = valid.guildId;
     this.#extras = rest;
@@ -67,44 +67,37 @@ class Wrapper {
     }
   }
 
-  loadDefaults(): void {
-    const ready = {
-      name: Events.ClientReady,
-      once: true,
-      execute(...[readyClient]: unknown[]) {
-        const client: Client = readyClient as Client;
-        console.log(`${client.user?.tag} is ready!`);
-      },
-    };
-    this.events.loadItem(ready.name, ready);
-  }
-
   createClient(): Client {
     this.#client = new Client({ intents: this.intents });
-    const event = {
-      name: Events.InteractionCreate,
-      execute: (...[interaction]: unknown[]) => {
-        const int = interaction as Interaction;
-        this.dispatchCmds(int).catch((err) => {
-          console.error("Unhandled error while dispatching interaction: ", err);
-        });
-      },
-    };
-    this.events.loadItem(event.name, event);
     return this.#client;
   }
 
   async startClient(): Promise<void> {
+    if (!this.client) {
+      console.warn("Unable to reach client: no instance found");
+      return;
+    }
     try {
-      if (!this.client) {
-        console.warn("Unable to reach client: no instance found");
-        return;
-      }
-      this.events.deploy(this.client);
+      await this.loadCmds("dist/Commands");
+      await this.loadEvents("dist/Events");
+      await this.loadEvents({
+        dispatch: {
+          name: Events.InteractionCreate,
+          execute: (...[interaction]: unknown[]) => {
+            const int = interaction as Interaction;
+            this.dispatchCmds(int).catch((err) => {
+              console.error("Unhandled error: ", err);
+            });
+          },
+        },
+      });
+      await this.registerCmds();
+      this.deployEvents(this.client);
       await this.client.login(this.#token);
-    } catch (err: unknown) {
-      if (err instanceof Error) console.error(err.message);
-      throw err;
+    } catch (startErr: unknown) {
+      const reason = startErr instanceof Error ? startErr.message : startErr;
+      console.error(reason);
+      throw startErr;
     }
   }
 
@@ -115,9 +108,10 @@ class Wrapper {
         return;
       }
       await this.client.destroy();
-    } catch (err: unknown) {
-      if (err instanceof Error) console.error(err.message);
-      throw err;
+    } catch (stopErr: unknown) {
+      const reason = stopErr instanceof Error ? stopErr.message : stopErr;
+      console.error(reason);
+      throw stopErr;
     }
   }
   async loadCmds(path: string): Promise<void>;
@@ -131,6 +125,18 @@ class Wrapper {
     }
   }
 
+  async registerCmds() {
+    await this.commands.register({
+      token: this.#token,
+      clientId: this.clientId,
+      guildId: this.guildId,
+    });
+  }
+
+  async dispatchCmds(interaction: Interaction) {
+    await this.commands.dispatch(interaction);
+  }
+
   async loadEvents(path: string): Promise<void>;
   async loadEvents(list: Record<string, DiscordJSEvent>): Promise<void>;
   async loadEvents(events: string | Record<string, DiscordJSEvent>) {
@@ -142,16 +148,8 @@ class Wrapper {
     }
   }
 
-  async registerCmds() {
-    await this.commands.register({
-      token: this.#token,
-      clientId: this.clientId,
-      guildId: this.guildId,
-    });
-  }
-
-  async dispatchCmds(interaction: Interaction) {
-    await this.commands.dispatch(interaction);
+  deployEvents(client: Client) {
+    this.events.deploy(client);
   }
 
   // Getters and Setters:

@@ -1,4 +1,3 @@
-import { readAllFiles, ImportPath } from "./Fremy/utils.js";
 import { Fremy } from "./Fremy/Wrapper.js";
 import {
   Manager,
@@ -10,8 +9,6 @@ import {
 import * as DiscordJS from "discord.js";
 
 export {
-  readAllFiles,
-  ImportPath,
   Fremy,
   Manager,
   CommandManager,

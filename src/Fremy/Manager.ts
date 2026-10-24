@@ -9,11 +9,40 @@ import {
 } from "discord.js";
 
 import type { Client, Interaction, InteractionReplyOptions } from "discord.js";
-import { ImportPath } from "./utils.js";
+import { globSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+interface DiscordJSCommand {
+  data: SlashCommandBuilder | ContextMenuCommandBuilder;
+  execute: (i: Interaction) => Promise<void>;
+}
+
+interface DiscordJSEvent {
+  name: string;
+  once?: boolean;
+  execute: (...args: unknown[]) => Promise<void> | void;
+}
+
+const EVENT_NAMES: readonly unknown[] = Object.values(Events);
+
+function isSlash(data: unknown): data is SlashCommandBuilder {
+  return data instanceof SlashCommandBuilder;
+}
+
+function isContext(data: unknown): data is ContextMenuCommandBuilder {
+  return data instanceof ContextMenuCommandBuilder;
+}
+
+function isEvent(name: unknown): name is Events {
+  return EVENT_NAMES.includes(name);
+}
 
 abstract class Manager<T> {
   collection: Collection<string, T> = new Collection();
+
   abstract isType(value: unknown): value is T;
+
   loadItem(name: string, item: T): void {
     if (!name || !item) return;
     if (this.has(name)) {
@@ -29,10 +58,22 @@ abstract class Manager<T> {
       this.loadItem(key, value);
     });
   }
-  async _FromPath(path: string): Promise<T[]> {
-    const imports = await ImportPath(path);
-    if (!imports) throw new Error("Problem with Importing given files");
-    return [...new Set<T>(imports.flatMap((mod) => Object.values(mod)))];
+  async __load__(dir: string, isValid: (v: unknown) => v is T): Promise<T[]> {
+    const items: T[] = [];
+    for (const file of globSync("**/*.{js,ts}", {
+      cwd: dir,
+      exclude: ["**/*.d.ts", "**/*.map.*", "**/*.test.*"],
+    })) {
+      const root = resolve(dir, file);
+      const url = pathToFileURL(root).href;
+
+      const mod: Record<string, unknown> = await import(url);
+      for (const value of Object.values(mod)) {
+        if (isValid(value)) items.push(value);
+        else console.warn(`Invalid export in ${url}`);
+      }
+    }
+    return items;
   }
   abstract loadPath(path: string): Promise<void>;
   get keys() {
@@ -52,36 +93,23 @@ abstract class Manager<T> {
   }
 }
 
-interface DiscordJSCommand {
-  data: SlashCommandBuilder | ContextMenuCommandBuilder;
-  execute: (i: Interaction) => Promise<void>;
-}
-
 class CommandManager extends Manager<DiscordJSCommand> {
   override isType(value: unknown): value is DiscordJSCommand {
     if (typeof value !== "object" || !value) return false;
     return (
       "data" in value &&
-      (this.isSlash(value.data) || this.isContext(value.data)) &&
+      (isSlash(value.data) || isContext(value.data)) &&
       "execute" in value &&
       typeof value.execute === "function"
     );
   }
-  isSlash(data: unknown): data is SlashCommandBuilder {
-    return data instanceof SlashCommandBuilder;
-  }
-  isContext(data: unknown): data is ContextMenuCommandBuilder {
-    return data instanceof ContextMenuCommandBuilder;
-  }
 
   override async loadPath(path: string): Promise<void> {
     if (!path) return;
-    const commands: DiscordJSCommand[] = (await this._FromPath(path)).filter(
-      (mod): mod is DiscordJSCommand => this.isType(mod),
-    );
-    commands.forEach((command) => {
-      this.loadItem(command.data.name, command);
-    });
+    const cmds = await this.__load__(path, this.isType);
+    for (const cmd of cmds) {
+      this.loadItem(cmd.data.name, cmd);
+    }
   }
 
   async register(required: {
@@ -115,11 +143,11 @@ class CommandManager extends Manager<DiscordJSCommand> {
       console.log(
         `Successfully reloaded ${data.length} application (/) commands.`,
       );
-    } catch (dispatchErr: unknown) {
+    } catch (registerErr: unknown) {
       const reason =
-        dispatchErr instanceof Error ? dispatchErr.message : dispatchErr;
+        registerErr instanceof Error ? registerErr.message : registerErr;
       console.error(`Error while registring commands`, reason);
-      throw dispatchErr;
+      throw registerErr;
     }
   }
 
@@ -129,8 +157,9 @@ class CommandManager extends Manager<DiscordJSCommand> {
     if (!command) return;
     try {
       await command.execute(interaction);
-    } catch (err: unknown) {
-      const reason = err instanceof Error ? err.message : err;
+    } catch (dispatchErr: unknown) {
+      const reason =
+        dispatchErr instanceof Error ? dispatchErr.message : dispatchErr;
       console.error(`Command ${interaction.commandName} failed - ${reason}`);
       await this._replyWithError(interaction);
     }
@@ -155,35 +184,23 @@ class CommandManager extends Manager<DiscordJSCommand> {
   }
 }
 
-interface DiscordJSEvent {
-  name: string;
-  once?: boolean;
-  execute: (...args: unknown[]) => Promise<void> | void;
-}
-
-const EVENT_NAMES: readonly unknown[] = Object.values(Events);
-
 class EventManager extends Manager<DiscordJSEvent> {
   override isType(value: unknown): value is DiscordJSEvent {
     if (typeof value !== "object" || !value) return false;
     return (
       "name" in value &&
-      this.isEvent(value.name) &&
+      isEvent(value.name) &&
       "execute" in value &&
       typeof value.execute === "function"
     );
   }
-  isEvent(name: unknown): name is Events {
-    return EVENT_NAMES.includes(name);
-  }
+
   override async loadPath(path: string): Promise<void> {
     if (!path) return;
-    const events: DiscordJSEvent[] = (await this._FromPath(path)).filter(
-      (mod): mod is DiscordJSEvent => this.isType(mod),
-    );
-    events.forEach((event) => {
+    const events = await this.__load__(path, this.isType);
+    for (const event of events) {
       this.loadItem(event.name, event);
-    });
+    }
   }
 
   deploy(client: Client): void {
