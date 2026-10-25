@@ -1,7 +1,7 @@
 {
-  "name": "Fremy",
+  "name": "fremy.js",
   "version": "1.0.0",
-  "description": "A Framework for discord.js ",
+  "description": "A Bot Making Framework for discord.js ",
   "keywords": [
     "discord",
     "discord.js",
