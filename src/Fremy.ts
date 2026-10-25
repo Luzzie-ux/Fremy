@@ -10,8 +10,10 @@ import {
   isEvent,
 } from "./Manager.js";
 
-const DEFAULT_COMMANDS_PATH = "./node_modules/Fremy/dist/Commands";
-const DEFAULT_EVENTS_PATH = "./node_modules/Fremy/dist/Events";
+import { join } from "node:path";
+
+const DEFAULT_COMMANDS_PATH = join(import.meta.dirname, "Commands");
+const DEFAULT_EVENTS_PATH = join(import.meta.dirname, "Events");
 
 type Intent =
   GatewayIntentBits | IntentName | Array<GatewayIntentBits | IntentName>;
