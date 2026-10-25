@@ -83,8 +83,9 @@ class Wrapper {
   }
 
   async startClient(load_defaults: boolean = true): Promise<void> {
+    console.log("\n--- Starting Client Session ---");
     if (!this.client) {
-      console.warn("Unable to reach client: no instance found");
+      console.warn("|-- Unable to reach client: no instance found");
       return;
     }
     try {

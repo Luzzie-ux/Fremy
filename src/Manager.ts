@@ -128,7 +128,7 @@ class CommandManager extends Manager<DiscordJSCommand> {
     clientId: string;
     guildId?: string;
   }): Promise<void> {
-    console.log("\n--- Registring Commands ---\n");
+    console.log("\n--- Registring Commands ---");
     if (!required.token.trim() || !required.clientId.trim()) {
       throw new Error("token and clientId are required");
     }
@@ -153,7 +153,7 @@ class CommandManager extends Manager<DiscordJSCommand> {
       }
 
       console.log(
-        `| --Successfully reloaded ${data.length} application (/) commands.`,
+        `|-- Successfully reloaded ${data.length} application (/) commands.`,
       );
     } catch (registerErr: unknown) {
       const reason =
@@ -216,7 +216,7 @@ class EventManager extends Manager<DiscordJSEvent> {
   }
 
   deploy(client: Client): void {
-    console.log("\n--- Deploying Events ---\n");
+    console.log("\n--- Deploying Events ---");
     for (const event of this.values) {
       const handler = async (...args: unknown[]) => {
         try {
