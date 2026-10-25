@@ -79,8 +79,10 @@ abstract class Manager<T> {
       const url = pathToFileURL(root).href;
       const mod: Record<string, unknown> = await import(url);
       for (const value of Object.values(mod)) {
-        if (isValid(value)) items.push(value);
-        else console.warn(`Invalid export in ${url}: ${typeof value}`);
+        if (isValid(value)) {
+          console.log(`Successfully loaded file ${file}`);
+          items.push(value);
+        } else console.warn(`Invalid export in ${url}: ${typeof value}`);
       }
     }
     return items;

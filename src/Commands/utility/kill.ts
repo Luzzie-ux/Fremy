@@ -10,6 +10,7 @@ const kill = {
       await interaction.reply({
         content: `${interaction.client.user.tag} is going offline :c`,
       });
+    console.warn("Killing process now");
     interaction.client.destroy();
   },
 };
