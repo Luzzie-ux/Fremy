@@ -69,7 +69,7 @@ abstract class Manager<T> {
   }
 
   async __load__(dir: string, isValid: (v: unknown) => v is T): Promise<T[]> {
-    console.log(`--- Loading files from ${dir} ---`);
+    console.log(`\n--- Loading files from ${dir} ---`);
     const items: T[] = [];
     for (const file of globSync("**/*.{js,ts}", {
       cwd: dir,
@@ -80,9 +80,9 @@ abstract class Manager<T> {
       const mod: Record<string, unknown> = await import(url);
       for (const value of Object.values(mod)) {
         if (isValid(value)) {
-          console.log(`Successfully loaded file ${file}`);
+          console.log(`|-- Successfully loaded file: ${file}`);
           items.push(value);
-        } else console.warn(`Invalid export in ${url}: ${typeof value}`);
+        } else console.warn(`|-- Invalid export in ${url}: unknown type`);
       }
     }
     return items;
@@ -128,6 +128,7 @@ class CommandManager extends Manager<DiscordJSCommand> {
     clientId: string;
     guildId?: string;
   }): Promise<void> {
+    console.log("\n--- Registring Commands ---\n");
     if (!required.token.trim() || !required.clientId.trim()) {
       throw new Error("token and clientId are required");
     }
@@ -137,7 +138,7 @@ class CommandManager extends Manager<DiscordJSCommand> {
     try {
       let data: unknown[];
       console.log(
-        `Started refreshing ${body.length} application (/) commands.`,
+        `|-- Started refreshing ${body.length} application (/) commands.`,
       );
 
       if (required.guildId) {
@@ -152,12 +153,12 @@ class CommandManager extends Manager<DiscordJSCommand> {
       }
 
       console.log(
-        `Successfully reloaded ${data.length} application (/) commands.`,
+        `| --Successfully reloaded ${data.length} application (/) commands.`,
       );
     } catch (registerErr: unknown) {
       const reason =
         registerErr instanceof Error ? registerErr.message : registerErr;
-      console.error(`Error while registring commands`, reason);
+      console.error(`|-- Error while registring commands`, reason);
       throw registerErr;
     }
   }
@@ -215,6 +216,7 @@ class EventManager extends Manager<DiscordJSEvent> {
   }
 
   deploy(client: Client): void {
+    console.log("\n--- Deploying Events ---\n");
     for (const event of this.values) {
       const handler = async (...args: unknown[]) => {
         try {
@@ -225,9 +227,9 @@ class EventManager extends Manager<DiscordJSEvent> {
           console.error(`Event ${event.name} - ${reason}`);
         }
       };
-
       if (event.once) client.once(event.name, handler);
       else client.on(event.name, handler);
+      console.log(`|-- ${event.name} is ready!`);
     }
   }
 }

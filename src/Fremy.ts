@@ -42,6 +42,7 @@ class Wrapper {
   #commands: CommandManager;
 
   constructor(configs: JSONConfig) {
+    console.log("--- Fremy the Framework ---");
     const { token, intents, clientId, guildId, ...rest } = configs;
     const valid = validate({ token, intents, clientId, guildId });
     this.#token = valid.token;
