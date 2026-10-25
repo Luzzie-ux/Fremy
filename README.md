@@ -1,4 +1,4 @@
-# Fremy
+# Fremy.js
 
 **A small discord.js framework for building Discord bots with very little setup.**
 
